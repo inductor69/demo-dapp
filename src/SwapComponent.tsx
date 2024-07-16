@@ -144,6 +144,9 @@ const Swap: React.FC<SwapAndAddressComponentProps> = ({
 
   const { isSigned } = useSignStore();
 
+  const [isWBTCtoBTC, setIsWBTCtoBTC] = useState(true);
+
+
   useEffect(() => {
     if (!bitcoin) return;
     const getAddress = async () => {
@@ -163,16 +166,28 @@ const Swap: React.FC<SwapAndAddressComponentProps> = ({
     )
       return;
 
-    const sendAmount = Number(wbtcAmount) * 1e8;
-    const recieveAmount = Number(btcAmount) * 1e8;
+    let sendAmount, receiveAmount, sendAsset, receiveAsset;
+
+    if (isWBTCtoBTC) {
+      sendAmount = Number(wbtcAmount) * 1e8;
+      receiveAmount = Number(btcAmount) * 1e8;
+      sendAsset = Assets.ethereum_localnet.WBTC;
+      receiveAsset = Assets.bitcoin_regtest.BTC;
+    } else {
+      sendAmount = Number(btcAmount) * 1e8;
+      receiveAmount = Number(wbtcAmount) * 1e8;
+      sendAsset = Assets.bitcoin_regtest.BTC;
+      receiveAsset = Assets.ethereum_localnet.WBTC;
+    }
 
     changeAmount("WBTC", "");
+    changeAmount("BTC", "");
 
     await garden.swap(
-      Assets.ethereum_localnet.WBTC,
-      Assets.bitcoin_regtest.BTC,
+      sendAsset,
+      receiveAsset,
       sendAmount,
-      recieveAmount
+      receiveAmount
     );
   };
 
@@ -183,12 +198,18 @@ const Swap: React.FC<SwapAndAddressComponentProps> = ({
         <div className="input-component">
           <input
             id="receive-address"
-            placeholder="Enter BTC Address"
+            placeholder={isWBTCtoBTC ? "Enter BTC Address" : "Enter ETH Address"}
             value={btcAddress ? btcAddress : ""}
             onChange={(e) => setBtcAddress(e.target.value)}
           />
         </div>
       </div>
+      <ToggleSwitch
+        isChecked={isWBTCtoBTC}
+        onToggle={() => setIsWBTCtoBTC(!isWBTCtoBTC)}
+        leftLabel="BTC to WBTC"
+        rightLabel="WBTC to BTC"
+      />
       <button
         className={`button-${metaMaskIsConnected ? "white" : "black"}`}
         onClick={handleSwap}
@@ -199,5 +220,32 @@ const Swap: React.FC<SwapAndAddressComponentProps> = ({
     </div>
   );
 };
+
+// New ToggleSwitch component
+type ToggleSwitchProps = {
+  isChecked: boolean;
+  onToggle: () => void;
+  leftLabel: string;
+  rightLabel: string;
+};
+
+const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
+  isChecked,
+  onToggle,
+  leftLabel,
+  rightLabel,
+}) => {
+  return (
+    <div className="toggle-switch-container">
+      <span className={!isChecked ? "active" : ""}>{leftLabel}</span>
+      <label className="toggle-switch">
+        <input type="checkbox" checked={isChecked} onChange={onToggle} />
+        <span className="slider round"></span>
+      </label>
+      <span className={isChecked ? "active" : ""}>{rightLabel}</span>
+    </div>
+  );
+};
+
 
 export default SwapComponent;
